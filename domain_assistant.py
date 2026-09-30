@@ -20,7 +20,22 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Protocol
 
-from dotenv import load_dotenv
+try:
+    from dotenv import load_dotenv
+except ModuleNotFoundError:
+    def load_dotenv(dotenv_path: str | Path) -> None:
+        """Small fallback for environments where python-dotenv is unavailable."""
+        path = Path(dotenv_path)
+        if not path.is_file():
+            return
+        for raw_line in path.read_text(encoding="utf-8").splitlines():
+            line = raw_line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            name, value = line.split("=", 1)
+            name, value = name.strip(), value.strip()
+            if name and name not in os.environ:
+                os.environ[name] = value.strip('"\'')
 from openai import OpenAI, OpenAIError
 
 load_dotenv(Path(__file__).resolve().with_name(".env"))
